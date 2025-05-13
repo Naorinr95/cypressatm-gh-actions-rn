@@ -23,9 +23,20 @@ jobs:
           npx cypress run --browser chrome || true
 
       - name: Merge Mochawesome reports
+        if: always()
         run: |
+          echo "Merging mochawesome JSON files..."
           npx mochawesome-merge mochawesome-report/*.json > mochawesome.json
+          echo "Generating HTML report from merged JSON..."
           npx marge mochawesome.json -f report -o mochawesome-report
+
+      - name: Debug mochawesome-report content
+        if: always()
+        run: |
+          echo "Files in mochawesome-report:"
+          ls -l mochawesome-report || echo "Directory not found"
+          echo "Dumping mochawesome.json preview:"
+          head -n 20 mochawesome.json || echo "File not found"
 
       - name: Generate pass/fail summary from mochawesome.json
         if: always()
@@ -34,20 +45,30 @@ jobs:
           echo "| Test Case | Status | Duration (ms) |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|--------|----------------|" >> $GITHUB_STEP_SUMMARY
 
-          node -e "
-          const fs = require('fs');
-          const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
-          data.results.forEach(result => {
-            result.suites.forEach(suite => {
-              suite.tests.forEach(test => {
-                const name = test.fullTitle.replace(/\|/g, '-');
-                const state = test.state === 'passed' ? 'Passed' : 'Failed';
-                const duration = test.duration || 0;
-                console.log('| ' + name + ' | ' + state + ' | ' + duration + ' |');
+          if [ ! -f mochawesome.json ]; then
+            echo "| No test results found | Skipped | - |" >> $GITHUB_STEP_SUMMARY
+          else
+            node -e "
+            const fs = require('fs');
+            const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8') || '{}');
+
+            if (!data.results || !data.results.length) {
+              console.log('| No test cases found | Skipped | - |');
+              return;
+            }
+
+            data.results.forEach(result => {
+              result.suites.forEach(suite => {
+                suite.tests.forEach(test => {
+                  const name = test.fullTitle.replace(/\|/g, '-');
+                  const state = test.state === 'passed' ? 'Passed' : 'Failed';
+                  const duration = test.duration || 0;
+                  console.log('| ' + name + ' | ' + state + ' | ' + duration + ' |');
+                });
               });
             });
-          });
-          " >> $GITHUB_STEP_SUMMARY
+            " >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Upload Mochawesome HTML report
         if: always()
