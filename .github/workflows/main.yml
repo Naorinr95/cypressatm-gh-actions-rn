@@ -21,13 +21,28 @@ jobs:
       - name: Run Cypress Tests
         run: npx cypress run || true
 
+      
+      - name: Debug mochawesome-report contents
+        if: always()
+        run: |
+          echo "Checking mochawesome-report directory"
+          ls -la mochawesome-report || echo "❌ mochawesome-report folder missing"
+          echo "Looking for JSON test files:"
+          find mochawesome-report -name '*.json' || echo "❌ No mochawesome-report/*.json files found"
+
       - name: Merge and Generate Report
         if: always()
         run: |
           chmod +x ./node_modules/.bin/mochawesome-merge || true
           chmod +x ./node_modules/.bin/marge || true
+          echo "Merging JSON reports..."
           ./node_modules/.bin/mochawesome-merge mochawesome-report/*.json > mochawesome.json || echo "{}" > mochawesome.json
-          ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "Skipping HTML report"
+
+          echo "Dumping mochawesome.json:"
+          head -n 20 mochawesome.json || echo "❌ Could not read mochawesome.json"
+
+          echo "Generating HTML report..."
+          ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "⚠️ Skipping HTML report"
 
       - name: Upload report
         if: always()
