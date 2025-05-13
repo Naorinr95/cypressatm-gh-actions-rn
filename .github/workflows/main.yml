@@ -41,17 +41,10 @@ jobs:
           ./node_modules/.bin/mochawesome-merge mochawesome-report/*.json > mochawesome.json || echo "{}" > mochawesome.json
           ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "Skipping HTML report generation"
 
-      - name: Generate pass/fail summary from mochawesome.json
+      - name: Create summary script
         if: always()
         run: |
-          echo "## Test Results Summary (Pass/Fail)" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Case | Status | Duration (ms) |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----------|--------|----------------|" >> $GITHUB_STEP_SUMMARY
-
-          if [ ! -f mochawesome.json ]; then
-            echo "| No test results found | Skipped | - |" >> $GITHUB_STEP_SUMMARY
-          else
-            cat << 'EOF' | node >> $GITHUB_STEP_SUMMARY
+          cat > parse-summary.js << 'EOF'
 const fs = require('fs');
 try {
   const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
@@ -73,6 +66,18 @@ try {
   console.log('| Could not read mochawesome.json | Error | - |');
 }
 EOF
+
+      - name: Generate pass/fail summary from mochawesome.json
+        if: always()
+        run: |
+          echo "## Test Results Summary (Pass/Fail)" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Case | Status | Duration (ms) |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|----------------|" >> $GITHUB_STEP_SUMMARY
+
+          if [ ! -f mochawesome.json ]; then
+            echo "| No test results found | Skipped | - |" >> $GITHUB_STEP_SUMMARY
+          else
+            node parse-summary.js >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Upload Mochawesome HTML report
