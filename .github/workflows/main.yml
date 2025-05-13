@@ -71,28 +71,28 @@ jobs:
           head -n 20 mochawesome.json || echo "❌ Could not read file"
 
       - name: Generate test result summary table
-        if: always()
-        run: |
-          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
-          echo "| ✅ Passed | ❌ Failed | 🔄 Skipped | Total |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-----------|------------|-------|" >> $GITHUB_STEP_SUMMARY
-          node -e "
-          const fs = require('fs');
-          try {
-            const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
-            let passed = 0, failed = 0, skipped = 0;
-            data.results.forEach(r => {
-              r.suites.forEach(s => {
-                s.tests.forEach(t => {
-                  if (t.state === 'passed') passed++;
-                  else if (t.state === 'failed') failed++;
-                  else skipped++;
-                });
-              });
-            });
-            const total = passed + failed + skipped;
-            console.log(| ${passed} | ${failed} | ${skipped} | ${total} |);
-          } catch (err) {
-            console.log('| ⚠️ Could not read mochawesome.json | - | - | - |');
-          }
-          " >> $GITHUB_STEP_SUMMARY
+  if: always()
+  run: |
+    echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+    echo "| ✅ Passed | ❌ Failed | 🔄 Skipped | Total |" >> $GITHUB_STEP_SUMMARY
+    echo "|----------|-----------|------------|-------|" >> $GITHUB_STEP_SUMMARY
+    node -e "
+    const fs = require('fs');
+    try {
+      const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
+      let passed = 0, failed = 0, skipped = 0;
+      data.results.forEach(r => {
+        r.suites.forEach(s => {
+          s.tests.forEach(t => {
+            if (t.state === 'passed') passed++;
+            else if (t.state === 'failed') failed++;
+            else skipped++;
+          });
+        });
+      });
+      const total = passed + failed + skipped;
+      console.log(`| ${passed} | ${failed} | ${skipped} | ${total} |`);
+    } catch (err) {
+      console.log('| ⚠️ Could not read mochawesome.json | - | - | - |');
+    }
+    " >> $GITHUB_STEP_SUMMARY
