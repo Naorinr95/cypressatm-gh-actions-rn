@@ -25,7 +25,7 @@ jobs:
           browser: chrome
           config-file: cypress.config.js
 
-      - name: Upload Mochawesome HTML report
+      -       - name: Upload Mochawesome HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -41,7 +41,7 @@ jobs:
             cypress/screenshots
             cypress/videos
 
-      - name: Mark workflow as success (ignore test failure)
+      - name: Mark workflow as success (ignore Cypress failure)
         if: failure()
-        run: echo "Test step failed, but we are allowing the workflow to pass."
+        run: echo "Ignoring test failure to pass the workflow"
         continue-on-error: true
