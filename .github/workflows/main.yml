@@ -5,12 +5,10 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 22
@@ -18,34 +16,43 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run Cypress tests (allow failure)
+      - name: Run Cypress Tests
         run: npx cypress run || true
 
-      - name: Ensure mochawesome tools are executable
-        if: always()
+      - name: Merge and Generate Report
         run: |
-          chmod +x ./node_modules/.bin/mochawesome-merge || true
-          chmod +x ./node_modules/.bin/marge || true
+          npx mochawesome-merge mochawesome-report/*.json > mochawesome.json
+          npx marge mochawesome.json -f report -o mochawesome-report
 
-      - name: Merge mochawesome reports
-        if: always()
-        run: |
-          echo "Merging reports..."
-          ./node_modules/.bin/mochawesome-merge mochawesome-report/*.json > mochawesome.json || echo "{}" > mochawesome.json
-          ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "Skipping HTML report"
-
-      - name: Upload HTML report
-        if: always()
+      - name: Upload report
         uses: actions/upload-artifact@v4
         with:
           name: mochawesome-report
           path: mochawesome-report
 
-      - name: Upload Cypress media
+      - name: Generate test result summary table
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-media
-          path: |
-            cypress/screenshots
-            cypress/videos
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| ✅ Passed | ❌ Failed | 🔄 Skipped | Total |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-----------|------------|-------|" >> $GITHUB_STEP_SUMMARY
+          node -e "
+          const fs = require('fs');
+          try {
+            const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
+            let passed = 0, failed = 0, skipped = 0;
+            data.results.forEach(r => {
+              r.suites.forEach(s => {
+                s.tests.forEach(t => {
+                  if (t.state === 'passed') passed++;
+                  else if (t.state === 'failed') failed++;
+                  else skipped++;
+                });
+              });
+            });
+            const total = passed + failed + skipped;
+            console.log(`| ${passed} | ${failed} | ${skipped} | ${total} |`);
+          } catch (err) {
+            console.log('| ⚠️ Could not read mochawesome.json | - | - | - |');
+          }
+          " >> $GITHUB_STEP_SUMMARY
