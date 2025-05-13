@@ -22,6 +22,12 @@ jobs:
         run: |
           npx cypress run --browser chrome || true
 
+      - name: Make mochawesome binaries executable
+        if: always()
+        run: |
+          chmod +x ./node_modules/.bin/mochawesome-merge
+          chmod +x ./node_modules/.bin/marge
+
       - name: Merge Mochawesome reports
         if: always()
         run: |
@@ -34,11 +40,30 @@ jobs:
           echo "## Test Results Summary (Pass/Fail)" >> $GITHUB_STEP_SUMMARY
           echo "| Test Case | Status | Duration (ms) |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|--------|----------------|" >> $GITHUB_STEP_SUMMARY
+
           if [ ! -f mochawesome.json ]; then
             echo "| No test results found | Skipped | - |" >> $GITHUB_STEP_SUMMARY
           else
-            echo "Parsing mochawesome.json"
-            node -e "const fs=require('fs');try{const d=JSON.parse(fs.readFileSync('mochawesome.json','utf8'));if(!d.results){console.log('| No test cases found | Skipped | - |')}else{d.results.forEach(r=>{r.suites.forEach(s=>{s.tests.forEach(t=>{const n=t.fullTitle.replace(/\|/g,'-');const st=t.state==='passed'?'Passed':'Failed';const du=t.duration||0;console.log(`| ${n} | ${st} | ${du} |`)})})})}}catch(e){console.log('| Error reading mochawesome.json | Error | - |')}"
+            node -e "const fs = require('fs');
+            try {
+              const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
+              if (!data.results) {
+                console.log('| No test cases found | Skipped | - |');
+              } else {
+                data.results.forEach(result => {
+                  result.suites.forEach(suite => {
+                    suite.tests.forEach(test => {
+                      const name = test.fullTitle.replace(/\|/g, '-');
+                      const state = test.state === 'passed' ? 'Passed' : 'Failed';
+                      const duration = test.duration || 0;
+                      console.log(`| ${name} | ${state} | ${duration} |`);
+                    });
+                  });
+                });
+              }
+            } catch (e) {
+              console.log('| Error reading mochawesome.json | Error | - |');
+            }" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Mochawesome HTML report
         if: always()
