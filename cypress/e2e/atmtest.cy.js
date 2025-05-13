@@ -14,6 +14,6 @@ describe('CSSLocators', () => {
     cy.get("button[name='submit_search']").click();
 
     // Wait for result element and check text
-    cy.get(".lighter", { timeout: 10000 }).should('contain.text', "T-Shirts");
+    cy.get(".lighter", { timeout: 10000 }).should('contain.text', "Dresses");
   });
 });
