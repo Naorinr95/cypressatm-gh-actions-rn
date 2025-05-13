@@ -21,11 +21,28 @@ jobs:
       - name: Run Cypress tests manually (allow failure)
         id: cypress
         run: |
-          echo "## Cypress Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Cypress Test Summary (Raw)" >> $GITHUB_STEP_SUMMARY
           npx cypress run --browser chrome | tee results.txt || true
           echo '```' >> $GITHUB_STEP_SUMMARY
           tail -n 30 results.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Summarize Cypress results (Pass/Fail Table)
+        if: always()
+        run: |
+          echo "## Test Results Summary (Pass/Fail)" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Name | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          test_name=""
+          while IFS= read -r line; do
+            if [[ "$line" == *"Running:"* ]]; then
+              test_name=$(echo "$line" | awk '{print $2}')
+            elif [[ "$line" == *"✓"* ]]; then
+              echo "| $test_name | Passed |" >> $GITHUB_STEP_SUMMARY
+            elif [[ "$line" == *"✖"* ]]; then
+              echo "| $test_name | Failed |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done < results.txt
 
       - name: Upload Mochawesome HTML report
         if: always()
