@@ -18,6 +18,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # Cypress GitHub Action handles install & verify, so we don't need manual verify
+
       - name: Run Cypress tests in Chrome
         id: cypress
         uses: cypress-io/github-action@v6
@@ -25,7 +27,7 @@ jobs:
           browser: chrome
           config-file: cypress.config.js
 
-      -       - name: Upload Mochawesome HTML report
+      - name: Upload Mochawesome HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -43,5 +45,5 @@ jobs:
 
       - name: Mark workflow as success (ignore Cypress failure)
         if: failure()
-        run: echo "Ignoring test failure to pass the workflow"
+        run: echo "Cypress tests failed, but workflow will pass."
         continue-on-error: true
