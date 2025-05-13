@@ -8,11 +8,9 @@ module.exports = defineConfig({
     html: false,
     json: true
   },
-  video: true,
   e2e: {
     setupNodeEvents(on, config) {
-      // no plugin needed for mochawesome
+      // no plugins needed
     },
-    experimentalStudio: true,
   },
 });

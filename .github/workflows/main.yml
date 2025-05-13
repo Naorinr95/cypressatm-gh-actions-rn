@@ -18,6 +18,10 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Record start time
+        if: always()
+        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+
       - name: Run Cypress tests (allow failure)
         run: |
           npx cypress run --browser chrome || true
@@ -40,43 +44,42 @@ jobs:
           ./node_modules/.bin/mochawesome-merge mochawesome-report/*.json > mochawesome.json || echo "{}" > mochawesome.json
           ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "Skipping HTML report generation"
 
-      - name: Write summary script to file
+      - name: Write enhanced summary script
         if: always()
         run: |
-          echo "Writing parse-summary.js"
           echo "const fs = require('fs');" > parse-summary.js
+          echo "let passed = 0, failed = 0, skipped = 0, total = 0;" >> parse-summary.js
           echo "try {" >> parse-summary.js
           echo "  const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));" >> parse-summary.js
-          echo "  if (!data.results || data.results.length === 0) {" >> parse-summary.js
-          echo "    console.log('| No test cases found | Skipped | - |');" >> parse-summary.js
-          echo "  } else {" >> parse-summary.js
-          echo "    data.results.forEach(result => {" >> parse-summary.js
-          echo "      result.suites.forEach(suite => {" >> parse-summary.js
-          echo "        suite.tests.forEach(test => {" >> parse-summary.js
-          echo "          const name = test.fullTitle.replace(/\\|/g, '-');" >> parse-summary.js
-          echo "          const status = test.state === 'passed' ? 'Passed' : 'Failed';" >> parse-summary.js
-          echo "          const duration = test.duration || 0;" >> parse-summary.js
-          echo "          console.log(\`| \${name} | \${status} | \${duration} |\`);" >> parse-summary.js
-          echo "        });" >> parse-summary.js
+          echo "  data.results.forEach(result => {" >> parse-summary.js
+          echo "    result.suites.forEach(suite => {" >> parse-summary.js
+          echo "      suite.tests.forEach(test => {" >> parse-summary.js
+          echo "        total++;" >> parse-summary.js
+          echo "        if (test.state === 'passed') passed++;" >> parse-summary.js
+          echo "        else if (test.state === 'failed') failed++;" >> parse-summary.js
+          echo "        else skipped++;" >> parse-summary.js
           echo "      });" >> parse-summary.js
           echo "    });" >> parse-summary.js
-          echo "  }" >> parse-summary.js
+          echo "  });" >> parse-summary.js
+          echo "  console.log('| ✅ Passed | ❌ Failed | 🔄 Skipped | Total |');" >> parse-summary.js
+          echo "  console.log('|----------|-----------|--------------|-------|');" >> parse-summary.js
+          echo "  console.log(`| ${passed} | ${failed} | ${skipped} | ${total} |`);" >> parse-summary.js
           echo "} catch (e) {" >> parse-summary.js
-          echo "  console.log('| Could not read mochawesome.json | Error | - |');" >> parse-summary.js
+          echo "  console.log('| ⚠️ Could not parse mochawesome.json | - | - | - |');" >> parse-summary.js
           echo "}" >> parse-summary.js
 
-      - name: Generate pass/fail summary from mochawesome.json
+      - name: Generate test summary
         if: always()
         run: |
-          echo "## Test Results Summary (Pass/Fail)" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Case | Status | Duration (ms) |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----------|--------|----------------|" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          node parse-summary.js >> $GITHUB_STEP_SUMMARY
 
-          if [ ! -f mochawesome.json ]; then
-            echo "| No test results found | Skipped | - |" >> $GITHUB_STEP_SUMMARY
-          else
-            node parse-summary.js >> $GITHUB_STEP_SUMMARY
-          fi
+      - name: Record end time and print duration
+        if: always()
+        run: |
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          echo "⏱️ **Duration:** ${DURATION}s" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Mochawesome HTML report
         if: always()
