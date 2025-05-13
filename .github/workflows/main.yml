@@ -31,6 +31,7 @@ jobs:
       - name: Merge Mochawesome reports
         if: always()
         run: |
+          echo "Merging mochawesome-report/*.json..."
           ./node_modules/.bin/mochawesome-merge mochawesome-report/*.json > mochawesome.json
           ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report
 
@@ -44,26 +45,29 @@ jobs:
           if [ ! -f mochawesome.json ]; then
             echo "| No test results found | Skipped | - |" >> $GITHUB_STEP_SUMMARY
           else
-            node -e "const fs = require('fs');
-            try {
-              const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
-              if (!data.results) {
-                console.log('| No test cases found | Skipped | - |');
-              } else {
-                data.results.forEach(result => {
-                  result.suites.forEach(suite => {
-                    suite.tests.forEach(test => {
-                      const name = test.fullTitle.replace(/\|/g, '-');
-                      const state = test.state === 'passed' ? 'Passed' : 'Failed';
-                      const duration = test.duration || 0;
-                      console.log(`| ${name} | ${state} | ${duration} |`);
-                    });
-                  });
-                });
-              }
-            } catch (e) {
-              console.log('| Error reading mochawesome.json | Error | - |');
-            }" >> $GITHUB_STEP_SUMMARY
+            node <<EOF >> $GITHUB_STEP_SUMMARY
+const fs = require('fs');
+try {
+  const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
+  if (!data.results || data.results.length === 0) {
+    console.log('| No test cases found | Skipped | - |');
+  } else {
+    data.results.forEach(result => {
+      result.suites.forEach(suite => {
+        suite.tests.forEach(test => {
+          const name = test.fullTitle.replace(/\|/g, '-');
+          const state = test.state === 'passed' ? 'Passed' : 'Failed';
+          const duration = test.duration || 0;
+          console.log(`| ${name} | ${state} | ${duration} |`);
+        });
+      });
+    });
+  }
+} catch (e) {
+  console.log('| Could not read mochawesome.json | Error | - |');
+}
+EOF
+          fi
 
       - name: Upload Mochawesome HTML report
         if: always()
