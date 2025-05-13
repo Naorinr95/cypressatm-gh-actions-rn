@@ -1,15 +1,15 @@
 describe('CSSLocators', () => {
-  it('searches for Dresses and verifies result', () => {
-    cy.visit("http://www.automationpractice.pl/index.php");
-    cy.get("#search_query_top").type("Dresses");
+  it('passes', () => {
+    cy.visit('http://automationpractice.pl/index.php');
+    cy.get('#search_query_top').type('Dress');
     cy.get("button[name='submit_search']").click();
-    cy.get(".lighter", { timeout: 10000 }).should('contain.text', "Dresses");
+    cy.get('.lighter').should('contain.text', 'Dress');
   });
 
-  it('searches for T-Shirts and verifies result', () => {
-    cy.visit("http://www.automationpractice.pl/index.php");
-    cy.get("#search_query_top").type("T-Shirts");
+  it('fails', () => {
+    cy.visit('http://automationpractice.pl/index.php');
+    cy.get('#search_query_top').type('Shoes');
     cy.get("button[name='submit_search']").click();
-    cy.get(".lighter", { timeout: 10000 }).should('contain.text', "Dresses");
+    cy.get('.lighter').should('contain.text', 'NonExistentText');
   });
 });
