@@ -18,10 +18,14 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run Cypress tests manually (shows ❌ but doesn't fail workflow)
+      - name: Run Cypress tests manually (allow failure)
         id: cypress
         run: |
-          npx cypress run --browser chrome || echo "Cypress tests failed"
+          echo "## Cypress Test Summary" >> $GITHUB_STEP_SUMMARY
+          npx cypress run --browser chrome | tee results.txt || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n 30 results.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Mochawesome HTML report
         if: always()
