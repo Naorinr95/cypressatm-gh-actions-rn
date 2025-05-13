@@ -30,18 +30,19 @@ jobs:
           find mochawesome-report -name '*.json' || echo "❌ No mochawesome-report/*.json files found"
 
       - name: Merge and Generate Report
-        if: always()
-        run: |
-          chmod +x ./node_modules/.bin/mochawesome-merge || true
-          chmod +x ./node_modules/.bin/marge || true
-          echo "Merging JSON reports..."
-          ./node_modules/.bin/mochawesome-merge mochawesome-report/*.json > mochawesome.json || echo "{}" > mochawesome.json
+  if: always()
+  run: |
+    chmod +x ./node_modules/.bin/mochawesome-merge || true
+    chmod +x ./node_modules/.bin/marge || true
+    echo "Merging JSON reports..."
+    ./node_modules/.bin/mochawesome-merge cypress/*.json > mochawesome.json || echo "{}" > mochawesome.json
 
-          echo "Dumping mochawesome.json:"
-          head -n 20 mochawesome.json || echo "❌ Could not read mochawesome.json"
+    echo "Dumping mochawesome.json:"
+    head -n 20 mochawesome.json || echo "❌ Could not read mochawesome.json"
 
-          echo "Generating HTML report..."
-          ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "⚠️ Skipping HTML report"
+    echo "Generating HTML report..."
+    ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "⚠️ Skipping HTML report"
+
 
       - name: Upload report
         if: always()
