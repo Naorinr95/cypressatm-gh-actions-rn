@@ -21,21 +21,20 @@ jobs:
       - name: Run Cypress Tests
         run: npx cypress run || true
 
-      - name: Debug mochawesome-report contents
+      - name: Debug JSON report contents
         if: always()
         run: |
-          echo "Checking mochawesome-report directory"
-          ls -la mochawesome-report || echo "❌ mochawesome-report folder missing"
-          echo "Looking for JSON test files:"
-          find mochawesome-report -name '*.json' || echo "❌ No mochawesome-report/*.json files found"
+          echo "Checking cypress directory for mochawesome JSON files"
+          find cypress -name '*.json' || echo "❌ No report JSON files found in cypress folder"
 
       - name: Merge and Generate Report
         if: always()
         run: |
           chmod +x ./node_modules/.bin/mochawesome-merge || true
           chmod +x ./node_modules/.bin/marge || true
-          echo "Merging JSON reports..."
-          ./node_modules/.bin/mochawesome-merge cypress/*.json > mochawesome.json || echo "{}" > mochawesome.json
+
+          echo "Merging JSON reports from cypress/ folder..."
+          ./node_modules/.bin/mochawesome-merge cypress/**/*.json > mochawesome.json || echo "{}" > mochawesome.json
 
           echo "Dumping mochawesome.json:"
           head -n 20 mochawesome.json || echo "❌ Could not read mochawesome.json"
@@ -89,8 +88,10 @@ jobs:
               });
             });
             const total = passed + failed + skipped;
-            console.log(`| ${passed} | ${failed} | ${skipped} | ${total} |`);
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              `| ${passed} | ${failed} | ${skipped} | ${total} |\n`);
           } catch (err) {
-            console.log('| ⚠️ Could not read mochawesome.json | - | - | - |');
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              '| ⚠️ Could not read mochawesome.json | - | - | - |\n');
           }
-          " >> $GITHUB_STEP_SUMMARY
+          "
