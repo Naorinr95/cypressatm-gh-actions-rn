@@ -11,7 +11,7 @@ module.exports = defineConfig({
   },
   e2e: {
     setupNodeEvents(on, config) {
-      mochawesome(on); // ✅ required
+      mochawesome(on);
       return config;
     },
   },
