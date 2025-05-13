@@ -5,10 +5,12 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 22
@@ -20,24 +22,28 @@ jobs:
         run: npx cypress run || true
 
       - name: Merge and Generate Report
-        run: |
-          npx mochawesome-merge mochawesome-report/*.json > mochawesome.json
-          npx marge mochawesome.json -f report -o mochawesome-report
-
-            - name: Merge and Generate Report
         if: always()
         run: |
           chmod +x ./node_modules/.bin/mochawesome-merge || true
           chmod +x ./node_modules/.bin/marge || true
-
           ./node_modules/.bin/mochawesome-merge mochawesome-report/*.json > mochawesome.json || echo "{}" > mochawesome.json
           ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "Skipping HTML report"
 
       - name: Upload report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mochawesome-report
           path: mochawesome-report
+
+      - name: Upload Cypress media
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-media
+          path: |
+            cypress/screenshots
+            cypress/videos
 
       - name: Generate test result summary table
         if: always()
