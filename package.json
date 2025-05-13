@@ -10,7 +10,7 @@
   "description": "",
   "dependencies": {
     "@4tw/cypress-drag-drop": "^2.3.0",
-    "cypress": "^14.3.2"
+    "cypress": "^14.3.3"
   },
   "devDependencies": {
     "cypress-file-upload": "^5.0.8",
