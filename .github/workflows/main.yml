@@ -25,15 +25,21 @@ jobs:
       - name: Make mochawesome binaries executable
         if: always()
         run: |
-          chmod +x ./node_modules/.bin/mochawesome-merge
-          chmod +x ./node_modules/.bin/marge
+          chmod +x ./node_modules/.bin/mochawesome-merge || true
+          chmod +x ./node_modules/.bin/marge || true
+
+      - name: Debug mochawesome-report folder
+        if: always()
+        run: |
+          echo "Listing mochawesome-report folder contents:"
+          ls -al mochawesome-report || echo "Folder not found"
 
       - name: Merge Mochawesome reports
         if: always()
         run: |
           echo "Merging mochawesome-report/*.json..."
-          ./node_modules/.bin/mochawesome-merge mochawesome-report/*.json > mochawesome.json
-          ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report
+          ./node_modules/.bin/mochawesome-merge mochawesome-report/*.json > mochawesome.json || echo "{}" > mochawesome.json
+          ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "Skipping HTML report generation"
 
       - name: Generate pass/fail summary from mochawesome.json
         if: always()
@@ -45,7 +51,7 @@ jobs:
           if [ ! -f mochawesome.json ]; then
             echo "| No test results found | Skipped | - |" >> $GITHUB_STEP_SUMMARY
           else
-            node -e "const fs=require('fs');try{const d=JSON.parse(fs.readFileSync('mochawesome.json','utf8'));if(!d.results){console.log('| No test cases found | Skipped | - |')}else{d.results.forEach(r=>{r.suites.forEach(s=>{s.tests.forEach(t=>{const n=t.fullTitle.replace(/\|/g,'-');const st=t.state==='passed'?'Passed':'Failed';const du=t.duration||0;console.log('| '+n+' | '+st+' | '+du+' |')})})})}}catch(e){console.log('| Error reading mochawesome.json | Error | - |')}" >> $GITHUB_STEP_SUMMARY
+            node -e "const fs=require('fs');try{const d=JSON.parse(fs.readFileSync('mochawesome.json','utf8'));if(!d.results||!d.results.length){console.log('| No test cases found | Skipped | - |')}else{d.results.forEach(r=>{r.suites.forEach(s=>{s.tests.forEach(t=>{const n=t.fullTitle.replace(/\|/g,'-');const st=t.state==='passed'?'Passed':'Failed';const du=t.duration||0;console.log('| '+n+' | '+st+' | '+du+' |')})})})}}catch(e){console.log('| Error reading mochawesome.json | Error | - |')}" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Mochawesome HTML report
         if: always()
