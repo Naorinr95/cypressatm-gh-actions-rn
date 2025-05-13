@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "test": "cypress run",
+  "posttest": "npx mochawesome-merge mochawesome-report/*.json > mochawesome.json && npx marge mochawesome.json -f report -o mochawesome-report"
+},
   "author": "Naorin",
   "license": "ISC",
   "description": "",
