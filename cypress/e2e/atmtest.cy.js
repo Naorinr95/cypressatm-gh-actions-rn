@@ -3,8 +3,6 @@ describe('CSSLocators', () => {
     cy.visit("http://www.automationpractice.pl/index.php");
     cy.get("#search_query_top").type("Dresses");
     cy.get("button[name='submit_search']").click();
-
-    // Wait for result element and check text
     cy.get(".lighter", { timeout: 10000 }).should('contain.text', "Dresses");
   });
 
@@ -12,8 +10,6 @@ describe('CSSLocators', () => {
     cy.visit("http://www.automationpractice.pl/index.php");
     cy.get("#search_query_top").type("T-Shirts");
     cy.get("button[name='submit_search']").click();
-
-    // Wait for result element and check text
     cy.get(".lighter", { timeout: 10000 }).should('contain.text', "Dresses");
   });
 });

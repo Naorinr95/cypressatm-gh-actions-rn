@@ -45,6 +45,16 @@ jobs:
             cypress/screenshots
             cypress/videos
 
+      
+      - name: Debug mochawesome.json
+        if: always()
+        run: |
+          echo "Does mochawesome.json exist?"
+          ls -l mochawesome.json || echo "❌ File not found"
+
+          echo "First 20 lines of mochawesome.json:"
+          head -n 20 mochawesome.json || echo "❌ Could not read file"
+
       - name: Generate test result summary table
         if: always()
         run: |
