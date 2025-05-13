@@ -37,35 +37,33 @@ jobs:
       - name: Merge Mochawesome reports
         if: always()
         run: |
-          echo "Merging mochawesome-report/*.json..."
           ./node_modules/.bin/mochawesome-merge mochawesome-report/*.json > mochawesome.json || echo "{}" > mochawesome.json
           ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "Skipping HTML report generation"
 
-      - name: Create summary script
+      - name: Write summary script to file
         if: always()
         run: |
-          cat > parse-summary.js << 'EOF'
-const fs = require('fs');
-try {
-  const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
-  if (!data.results || data.results.length === 0) {
-    console.log('| No test cases found | Skipped | - |');
-  } else {
-    data.results.forEach(result => {
-      result.suites.forEach(suite => {
-        suite.tests.forEach(test => {
-          const name = test.fullTitle.replace(/\|/g, '-');
-          const status = test.state === 'passed' ? 'Passed' : 'Failed';
-          const duration = test.duration || 0;
-          console.log(`| ${name} | ${status} | ${duration} |`);
-        });
-      });
-    });
-  }
-} catch (e) {
-  console.log('| Could not read mochawesome.json | Error | - |');
-}
-EOF
+          echo "Writing parse-summary.js"
+          echo "const fs = require('fs');" > parse-summary.js
+          echo "try {" >> parse-summary.js
+          echo "  const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));" >> parse-summary.js
+          echo "  if (!data.results || data.results.length === 0) {" >> parse-summary.js
+          echo "    console.log('| No test cases found | Skipped | - |');" >> parse-summary.js
+          echo "  } else {" >> parse-summary.js
+          echo "    data.results.forEach(result => {" >> parse-summary.js
+          echo "      result.suites.forEach(suite => {" >> parse-summary.js
+          echo "        suite.tests.forEach(test => {" >> parse-summary.js
+          echo "          const name = test.fullTitle.replace(/\\|/g, '-');" >> parse-summary.js
+          echo "          const status = test.state === 'passed' ? 'Passed' : 'Failed';" >> parse-summary.js
+          echo "          const duration = test.duration || 0;" >> parse-summary.js
+          echo "          console.log(\`| \${name} | \${status} | \${duration} |\`);" >> parse-summary.js
+          echo "        });" >> parse-summary.js
+          echo "      });" >> parse-summary.js
+          echo "    });" >> parse-summary.js
+          echo "  }" >> parse-summary.js
+          echo "} catch (e) {" >> parse-summary.js
+          echo "  console.log('| Could not read mochawesome.json | Error | - |');" >> parse-summary.js
+          echo "}" >> parse-summary.js
 
       - name: Generate pass/fail summary from mochawesome.json
         if: always()
