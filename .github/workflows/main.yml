@@ -1,18 +1,19 @@
-name: test
+name: Cypress Tests
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
-  cypress-tests:
+  test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 22
 
       - name: Install dependencies
         run: npm install
@@ -20,37 +21,78 @@ jobs:
       - name: Run Cypress Tests
         run: npx cypress run || true
 
-      - name: Merge mochawesome JSONs and generate HTML
+      
+      - name: Debug mochawesome-report contents
+        if: always()
         run: |
-          npx mochawesome-merge mochawesome-report/.jsons/*.json > mochawesome.json
-          npx marge mochawesome.json -f report -o mochawesome-report
+          echo "Checking mochawesome-report directory"
+          ls -la mochawesome-report || echo "❌ mochawesome-report folder missing"
+          echo "Looking for JSON test files:"
+          find mochawesome-report -name '*.json' || echo "❌ No mochawesome-report/*.json files found"
 
-      - name: Upload report artifacts
+      - name: Merge and Generate Report
+        if: always()
+        run: |
+          chmod +x ./node_modules/.bin/mochawesome-merge || true
+          chmod +x ./node_modules/.bin/marge || true
+          echo "Merging JSON reports..."
+          ./node_modules/.bin/mochawesome-merge mochawesome-report/*.json > mochawesome.json || echo "{}" > mochawesome.json
+
+          echo "Dumping mochawesome.json:"
+          head -n 20 mochawesome.json || echo "❌ Could not read mochawesome.json"
+
+          echo "Generating HTML report..."
+          ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "⚠️ Skipping HTML report"
+
+      - name: Upload report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mochawesome-report
           path: mochawesome-report
 
+      - name: Upload Cypress media
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-media
+          path: |
+            cypress/screenshots
+            cypress/videos
+
+      
+      - name: Debug mochawesome.json
+        if: always()
+        run: |
+          echo "Does mochawesome.json exist?"
+          ls -l mochawesome.json || echo "❌ File not found"
+
+          echo "First 20 lines of mochawesome.json:"
+          head -n 20 mochawesome.json || echo "❌ Could not read file"
+
       - name: Generate test result summary table
+        if: always()
         run: |
           echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
-          if [ -f mochawesome.json ]; then
-            node -e "
-              const fs = require('fs');
-              const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
-              let passed = 0, failed = 0, skipped = 0;
-              data.results.forEach(r => {
-                r.suites.forEach(s => {
-                  s.tests.forEach(t => {
-                    if(t.state === 'passed') passed++;
-                    else if(t.state === 'failed') failed++;
-                    else if(t.state === 'skipped') skipped++;
-                  });
+          echo "| ✅ Passed | ❌ Failed | 🔄 Skipped | Total |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-----------|------------|-------|" >> $GITHUB_STEP_SUMMARY
+          node -e "
+          const fs = require('fs');
+          try {
+            const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
+            let passed = 0, failed = 0, skipped = 0;
+            data.results.forEach(r => {
+              r.suites.forEach(s => {
+                s.tests.forEach(t => {
+                  if (t.state === 'passed') passed++;
+                  else if (t.state === 'failed') failed++;
+                  else skipped++;
                 });
               });
-              const total = passed + failed + skipped;
-              console.log('| ✅ Passed | ❌ Failed | 🌀 Skipped | Total |');
-              console.log(`| ${passed} | ${failed} | ${skipped} | ${total} |`);
-            " >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ mochawesome.json not found" >> $GITHUB_STEP_SUMMARY
+            });
+            const total = passed + failed + skipped;
+            console.log(| ${passed} | ${failed} | ${skipped} | ${total} |);
+          } catch (err) {
+            console.log('| ⚠️ Could not read mochawesome.json | - | - | - |');
+          }
+          " >> $GITHUB_STEP_SUMMARY
