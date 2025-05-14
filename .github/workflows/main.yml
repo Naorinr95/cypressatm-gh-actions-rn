@@ -3,11 +3,11 @@ name: Cypress Tests
 on: [push, pull_request]
 
 jobs:
-  test:
+  cypress-run:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -16,41 +16,25 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Run Cypress Tests
-        run: npx cypress run || true
+      - name: Verify Cypress installation
+        run: npx cypress verify
 
-      - name: Debug mochawesome-report contents
-        if: always()
-        run: |
-          echo "Checking mochawesome-report directory"
-          ls -la mochawesome-report || echo "❌ mochawesome-report folder missing"
-          echo "Looking for JSON test files:"
-          find mochawesome-report -name '*.json' || echo "❌ No mochawesome-report/*.json files found"
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          browser: chrome  # or use electron/headless
+          config-file: cypress.config.js
 
-      - name: Merge and Generate Report
-        if: always()
-        run: |
-          chmod +x ./node_modules/.bin/mochawesome-merge || true
-          chmod +x ./node_modules/.bin/marge || true
-          echo "Merging JSON reports..."
-          ./node_modules/.bin/mochawesome-merge cypress/*.json > mochawesome.json || echo "{}" > mochawesome.json
-
-          echo "Dumping mochawesome.json:"
-          head -n 20 mochawesome.json || echo "❌ Could not read mochawesome.json"
-
-          echo "Generating HTML report..."
-          ./node_modules/.bin/marge mochawesome.json -f report -o mochawesome-report || echo "⚠️ Skipping HTML report"
-
-      - name: Upload report
+      - name: Upload Mochawesome report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mochawesome-report
-          path: mochawesome-report
+          path: cypress/reports/html
 
-      - name: Upload Cypress media
+      - name: Upload Cypress screenshots and videos
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -58,39 +42,3 @@ jobs:
           path: |
             cypress/screenshots
             cypress/videos
-
-      - name: Debug mochawesome.json
-        if: always()
-        run: |
-          echo "Does mochawesome.json exist?"
-          ls -l mochawesome.json || echo "❌ File not found"
-
-          echo "First 20 lines of mochawesome.json:"
-          head -n 20 mochawesome.json || echo "❌ Could not read file"
-
-      - name: Generate test result summary table
-        if: always()
-        run: |
-          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
-          echo "| ✅ Passed | ❌ Failed | 🔄 Skipped | Total |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-----------|------------|-------|" >> $GITHUB_STEP_SUMMARY
-          node -e "
-          const fs = require('fs');
-          try {
-            const data = JSON.parse(fs.readFileSync('mochawesome.json', 'utf8'));
-            let passed = 0, failed = 0, skipped = 0;
-            data.results.forEach(r => {
-              r.suites.forEach(s => {
-                s.tests.forEach(t => {
-                  if (t.state === 'passed') passed++;
-                  else if (t.state === 'failed') failed++;
-                  else skipped++;
-                });
-              });
-            });
-            const total = passed + failed + skipped;
-            console.log(`| ${passed} | ${failed} | ${skipped} | ${total} |`);
-          } catch (err) {
-            console.log('| ⚠️ Could not read mochawesome.json | - | - | - |');
-          }
-          " >> $GITHUB_STEP_SUMMARY
